@@ -7,13 +7,13 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding  = "DB"
 database_name = "booking-db"
-database_id   = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+database_id   = "2a8989f9-a4bb-4add-9e59-6e34d0000317"
 # Create with: wrangler d1 create booking-db
 
 # ── KV Namespace (availability cache) ─────────────────────
 [[kv_namespaces]]
 binding = "KV"
-id      = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+id      = "cec9a951b4c8461b8f5f25bc000b798e"
 # Create with: wrangler kv:namespace create booking-cache
 
 # ── Environment variables (secrets set separately) ────────
@@ -24,6 +24,6 @@ id      = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
 #   wrangler secret put RESEND_API_KEY
 
 [vars]
-YOUR_NAME   = "Your Name"
-YOUR_EMAIL  = "you@yourdomain.com"
+YOUR_NAME   = "studioo"
+YOUR_EMAIL  = "info@studioo.co.uk"
 WIDGET_URL  = "https://booking.yourdomain.pages.dev"
