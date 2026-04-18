@@ -1,7 +1,3 @@
-// Admin Panel — password-protected SPA for managing slots and bookings.
-// Served at /admin on the same Cloudflare Pages deployment.
-// Access on tablet or laptop via browser.
-
 import { useState, useEffect, useCallback } from 'react';
 
 const API_URL      = import.meta.env.VITE_API_URL;
@@ -19,14 +15,9 @@ type Booking = {
   amount_paid_pence: number; currency: string; created_at: string;
 };
 
-// ── Auth gate ──────────────────────────────────────────────
-
 function useAdminSecret() {
   const [secret, setSecret] = useState(() => localStorage.getItem(STORAGE_KEY) ?? '');
-  const save = (s: string) => {
-    localStorage.setItem(STORAGE_KEY, s);
-    setSecret(s);
-  };
+  const save = (s: string) => { localStorage.setItem(STORAGE_KEY, s); setSecret(s); };
   const logout = () => { localStorage.removeItem(STORAGE_KEY); setSecret(''); };
   return { secret, save, logout };
 }
@@ -34,8 +25,6 @@ function useAdminSecret() {
 function adminHeaders(secret: string) {
   return { 'Content-Type': 'application/json', 'X-Admin-Secret': secret };
 }
-
-// ── Main Admin App ─────────────────────────────────────────
 
 export default function AdminApp() {
   const { secret, save, logout } = useAdminSecret();
@@ -61,15 +50,12 @@ export default function AdminApp() {
   );
 }
 
-// ── Login screen ───────────────────────────────────────────
-
 function LoginScreen({ onLogin }: { onLogin: (s: string) => void }) {
   const [val, setVal] = useState('');
   const [err, setErr] = useState('');
 
   const attempt = async () => {
     if (!val.trim()) return;
-    // Quick check — any 401 means wrong secret
     const res = await fetch(`${API_URL}/api/admin/bookings`, {
       headers: { 'X-Admin-Secret': val }
     });
@@ -102,16 +88,12 @@ function LoginScreen({ onLogin }: { onLogin: (s: string) => void }) {
   );
 }
 
-// ── Slots panel ────────────────────────────────────────────
-
 function SlotsPanel({ secret, onAuthError }: { secret: string; onAuthError: () => void }) {
-  const [slots, setSlots]   = useState<Slot[]>([]);
+  const [slots, setSlots]     = useState<Slot[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg]         = useState('');
-
-  // New slot form state
   const [newDate,  setNewDate]  = useState('');
-  const [newTimes, setNewTimes] = useState(''); // comma-separated times
+  const [newTimes, setNewTimes] = useState('');
   const [newPrice, setNewPrice] = useState('');
   const [adding,   setAdding]   = useState(false);
 
@@ -138,14 +120,28 @@ function SlotsPanel({ secret, onAuthError }: { secret: string; onAuthError: () =
   };
 
   const deleteSlot = async (slot: Slot) => {
-    if (slot.booking_status === 'confirmed') {
-      alert('This slot has a confirmed booking and cannot be deleted.');
-      return;
-    }
-    if (!confirm(`Delete slot ${slot.label} on ${slot.date}?`)) return;
-    await fetch(`${API_URL}/api/admin/slots/${encodeURIComponent(slot.id)}`, {
+    if (!confirm(`Delete slot ${slot.label} on ${slot.date}? This cannot be undone.`)) return;
+    const res = await fetch(`${API_URL}/api/admin/slots/${encodeURIComponent(slot.id)}`, {
       method: 'DELETE', headers: adminHeaders(secret)
     });
+    const data = await res.json() as { error?: string };
+    if (!res.ok) { alert(data.error ?? 'Could not delete slot.'); return; }
+    setMsg('Slot deleted.');
+    load();
+  };
+
+  const cancelBooking = async (slot: Slot) => {
+    if (!confirm(
+      `Cancel the booking for ${slot.booked_by} on ${slot.date} at ${slot.label}?\n\nA cancellation email will be sent to ${slot.booked_email}.`
+    )) return;
+
+    const res = await fetch(
+      `${API_URL}/api/admin/slots/${encodeURIComponent(slot.id)}/cancel`,
+      { method: 'POST', headers: adminHeaders(secret) }
+    );
+    const data = await res.json() as { ok?: boolean; error?: string };
+    if (!res.ok) { alert(data.error ?? 'Could not cancel booking.'); return; }
+    setMsg(`Booking cancelled and email sent to ${slot.booked_email}.`);
     load();
   };
 
@@ -156,28 +152,22 @@ function SlotsPanel({ secret, onAuthError }: { secret: string; onAuthError: () =
     const price = Math.round(parseFloat(newPrice) * 100);
     if (isNaN(price) || price <= 0) { setMsg('Invalid price.'); return; }
 
-    const times = newTimes.split(',').map(t => t.trim()).filter(Boolean);
+    const times   = newTimes.split(',').map(t => t.trim()).filter(Boolean);
     const payload = times.map(time => ({
-      date: newDate,
-      time,
-      price_pence: price,
-      currency: 'gbp',
+      date: newDate, time, price_pence: price, currency: 'gbp',
     }));
 
     setAdding(true);
     const res  = await fetch(`${API_URL}/api/admin/slots`, {
-      method:  'POST',
-      headers: adminHeaders(secret),
-      body:    JSON.stringify(payload)
+      method: 'POST', headers: adminHeaders(secret), body: JSON.stringify(payload)
     });
     const data = await res.json() as { created: string[]; errors: unknown[] };
-    setMsg(`Created ${data.created.length} slot(s).${data.errors.length ? ' Some errors — check console.' : ''}`);
+    setMsg(`Created ${data.created.length} slot(s).${data.errors.length ? ' Some errors occurred.' : ''}`);
     setNewDate(''); setNewTimes(''); setNewPrice('');
     setAdding(false);
     load();
   };
 
-  // Group by date
   const byDate: Record<string, Slot[]> = {};
   for (const slot of slots) {
     if (!byDate[slot.date]) byDate[slot.date] = [];
@@ -186,7 +176,6 @@ function SlotsPanel({ secret, onAuthError }: { secret: string; onAuthError: () =
 
   return (
     <div>
-      {/* Add slots form */}
       <div style={s.card}>
         <h3 style={s.cardTitle}>Add slots</h3>
         <div style={s.row}>
@@ -211,7 +200,6 @@ function SlotsPanel({ secret, onAuthError }: { secret: string; onAuthError: () =
         {msg && <p style={{ color: '#2563eb', fontSize: '13px', margin: '8px 0 0' }}>{msg}</p>}
       </div>
 
-      {/* Slot list */}
       {loading ? <p style={s.muted}>Loading…</p> : (
         Object.entries(byDate).sort().map(([date, daySlots]) => (
           <div key={date} style={s.card}>
@@ -221,18 +209,28 @@ function SlotsPanel({ secret, onAuthError }: { secret: string; onAuthError: () =
                 <div key={slot.id} style={{
                   ...s.slotRow,
                   opacity: slot.is_active ? 1 : 0.5,
-                  background: slot.booking_status === 'confirmed' ? '#f0fdf4' : '#fff'
+                  background: slot.booking_status === 'confirmed' ? '#f0fdf4'
+                            : slot.booking_status === 'cancelled'  ? '#fef2f2'
+                            : '#fff'
                 }}>
                   <span style={s.slotLabel}>{slot.label}</span>
                   <span style={s.slotPrice}>£{(slot.price_pence / 100).toFixed(2)}</span>
+
                   {slot.booking_status === 'confirmed' ? (
-                    <span style={s.bookedBadge}>Booked — {slot.booked_by}</span>
+                    <>
+                      <span style={s.bookedBadge}>Booked — {slot.booked_by}</span>
+                      <button onClick={() => cancelBooking(slot)} style={s.cancelBtn}>
+                        Cancel booking
+                      </button>
+                    </>
                   ) : (
                     <>
                       <button onClick={() => toggleActive(slot)} style={s.smallBtn}>
                         {slot.is_active ? 'Disable' : 'Enable'}
                       </button>
-                      <button onClick={() => deleteSlot(slot)} style={s.dangerSmallBtn}>Delete</button>
+                      <button onClick={() => deleteSlot(slot)} style={s.dangerSmallBtn}>
+                        Delete
+                      </button>
                     </>
                   )}
                 </div>
@@ -244,8 +242,6 @@ function SlotsPanel({ secret, onAuthError }: { secret: string; onAuthError: () =
     </div>
   );
 }
-
-// ── Bookings panel ─────────────────────────────────────────
 
 function BookingsPanel({ secret, onAuthError }: { secret: string; onAuthError: () => void }) {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -268,11 +264,17 @@ function BookingsPanel({ secret, onAuthError }: { secret: string; onAuthError: (
   return (
     <div>
       <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-        {['confirmed', 'pending', ''].map(f => (
-          <button key={f} onClick={() => setFilter(f)}
-            style={{ ...s.smallBtn, background: filter === f ? '#2563eb' : undefined,
-              color: filter === f ? '#fff' : undefined }}>
-            {f || 'All'}
+        {[
+          { value: 'confirmed', label: 'Confirmed' },
+          { value: 'cancelled', label: 'Cancelled' },
+          { value: 'pending',   label: 'Pending' },
+          { value: '',          label: 'All' },
+        ].map(f => (
+          <button key={f.value} onClick={() => setFilter(f.value)}
+            style={{ ...s.smallBtn,
+              background: filter === f.value ? '#2563eb' : undefined,
+              color:      filter === f.value ? '#fff'    : undefined }}>
+            {f.label}
           </button>
         ))}
       </div>
@@ -296,14 +298,20 @@ function BookingsPanel({ secret, onAuthError }: { secret: string; onAuthError: (
                   <td style={s.td}>{b.label}</td>
                   <td style={s.td}>{b.client_name}</td>
                   <td style={s.td}>
-                    <a href={`mailto:${b.client_email}`} style={{ color: '#2563eb' }}>{b.client_email}</a>
+                    <a href={`mailto:${b.client_email}`} style={{ color: '#2563eb' }}>
+                      {b.client_email}
+                    </a>
                   </td>
                   <td style={s.td}>£{(b.amount_paid_pence / 100).toFixed(2)}</td>
                   <td style={s.td}>
                     <span style={{
                       ...s.badge,
-                      background: b.status === 'confirmed' ? '#dcfce7' : '#fef9c3',
-                      color:      b.status === 'confirmed' ? '#166534' : '#854d0e'
+                      background: b.status === 'confirmed' ? '#dcfce7'
+                                : b.status === 'cancelled'  ? '#fee2e2'
+                                : '#fef9c3',
+                      color:      b.status === 'confirmed' ? '#166534'
+                                : b.status === 'cancelled'  ? '#b91c1c'
+                                : '#854d0e'
                     }}>{b.status}</span>
                   </td>
                   <td style={s.td}>{new Date(b.created_at).toLocaleDateString('en-GB')}</td>
@@ -316,8 +324,6 @@ function BookingsPanel({ secret, onAuthError }: { secret: string; onAuthError: (
     </div>
   );
 }
-
-// ── Helpers + small components ─────────────────────────────
 
 function TabBtn({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
@@ -336,12 +342,11 @@ function formatDate(d: string): string {
   });
 }
 
-// ── Styles ─────────────────────────────────────────────────
-
 const s: Record<string, React.CSSProperties> = {
   page:     { fontFamily: 'system-ui, sans-serif', minHeight: '100vh', background: '#f8fafc' },
   topbar:   { background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '12px 20px',
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0 },
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    position: 'sticky', top: 0, zIndex: 10 },
   logo:     { fontWeight: 700, fontSize: '16px' },
   content:  { maxWidth: '900px', margin: '0 auto', padding: '24px 16px' },
   card:     { background: '#fff', borderRadius: '12px', padding: '20px', marginBottom: '16px',
@@ -349,21 +354,24 @@ const s: Record<string, React.CSSProperties> = {
   cardTitle:{ fontSize: '15px', fontWeight: 600, margin: '0 0 14px' },
   row:      { display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-start' },
   field:    { display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: '120px' },
-  label:    { fontSize: '12px', fontWeight: 600, color: '#555', textTransform: 'uppercase',
-    letterSpacing: '0.04em' },
+  label:    { fontSize: '12px', fontWeight: 600, color: '#555',
+    textTransform: 'uppercase', letterSpacing: '0.04em' },
   input:    { padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: '8px',
     fontSize: '14px', outline: 'none' },
   primary:  { background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px',
-    padding: '9px 18px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' },
+    padding: '9px 18px', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+    whiteSpace: 'nowrap' },
   smallBtn: { background: '#f1f5f9', border: 'none', borderRadius: '6px',
     padding: '5px 10px', fontSize: '12px', cursor: 'pointer' },
   dangerSmallBtn: { background: '#fee2e2', border: 'none', borderRadius: '6px',
     padding: '5px 10px', fontSize: '12px', cursor: 'pointer', color: '#b91c1c' },
+  cancelBtn:{ background: '#fff3cd', border: 'none', borderRadius: '6px',
+    padding: '5px 10px', fontSize: '12px', cursor: 'pointer', color: '#92400e', fontWeight: 500 },
   logoutBtn:{ background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: '13px' },
   dateHeader:{ fontWeight: 700, fontSize: '14px', marginBottom: '10px', color: '#111' },
   slotList: { display: 'flex', flexDirection: 'column', gap: '6px' },
   slotRow:  { display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px',
-    background: '#fff', border: '1px solid #f0f0f0', borderRadius: '8px' },
+    border: '1px solid #f0f0f0', borderRadius: '8px', flexWrap: 'wrap' },
   slotLabel:{ fontWeight: 600, fontSize: '14px', minWidth: '80px' },
   slotPrice:{ color: '#2563eb', fontSize: '13px', flex: 1 },
   bookedBadge:{ background: '#dcfce7', color: '#166534', padding: '3px 8px',
