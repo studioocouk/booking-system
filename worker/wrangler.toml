@@ -27,3 +27,5 @@ id      = "cec9a951b4c8461b8f5f25bc000b798e"
 YOUR_NAME   = "studioo"
 YOUR_EMAIL  = "info@studioo.co.uk"
 WIDGET_URL  = "https://booking.yourdomain.pages.dev"
+[triggers]
+crons = ["0 2 * * *"]
