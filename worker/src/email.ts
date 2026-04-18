@@ -167,7 +167,7 @@ export async function sendCancellationEmail(booking: Record<string, unknown>, en
   const dateStr = formatDate(booking.date as string);
 
   await sendEmail({
-    from:    `Your Name <bookings@yourdomain.com>`,
+    from:    `Your Name <bookings@studioo.co.uk>`,
     to:      booking.client_email as string,
     subject: `Booking cancelled — ${dateStr} at ${booking.label}`,
     html: `<!DOCTYPE html>
