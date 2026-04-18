@@ -46,7 +46,7 @@ export default function CheckoutForm({ slot, apiUrl, onBack }: Props) {
       }
 
       // Redirect to Stripe Hosted Checkout
-      window.location.href = data.checkout_url;
+window.open(data.checkout_url, '_top');
 
     } catch {
       setError('Network error. Please check your connection and try again.');
