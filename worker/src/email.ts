@@ -163,3 +163,23 @@ function formatDate(iso: string): string {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
 }
+export async function sendCancellationEmail(booking: Record<string, unknown>, env: Env): Promise<void> {
+  const dateStr = formatDate(booking.date as string);
+
+  await sendEmail({
+    from:    `Your Name <bookings@yourdomain.com>`,
+    to:      booking.client_email as string,
+    subject: `Booking cancelled — ${dateStr} at ${booking.label}`,
+    html: `<!DOCTYPE html>
+<html>
+<body style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#333">
+  <h2 style="color:#1a1a1a">Your booking has been cancelled</h2>
+  <p>Hi ${booking.client_name},</p>
+  <p>Your booking for <strong>${dateStr}</strong> at <strong>${booking.label as string}</strong> has been cancelled.</p>
+  <p>If you have any questions or would like to rebook, please get in touch by replying to this email.</p>
+  <hr style="border:none;border-top:1px solid #eee;margin:32px 0">
+  <p style="font-size:12px;color:#999">Booking reference: ${(booking.id as string).slice(0, 8).toUpperCase()}</p>
+</body>
+</html>`
+  }, env);
+}
