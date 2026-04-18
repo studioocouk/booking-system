@@ -26,6 +26,9 @@ jobs:
   deploy-widget:
     name: Deploy Booking Widget
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
     defaults:
       run:
         working-directory: widget
