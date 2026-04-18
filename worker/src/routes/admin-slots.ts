@@ -7,6 +7,7 @@
 
 import { json } from '../index';
 import type { Env } from '../index';
+import { sendCancellationEmail } from '../email';
 
 export async function handleAdminSlots(
   request: Request,
@@ -136,7 +137,37 @@ export async function handleAdminSlots(
     await bustCache(env);
     return json({ ok: true });
   }
+  
+// ── POST /api/admin/slots/:id/cancel — cancel booking ──
+  if (method === 'POST' && path.endsWith('/cancel') && slotId) {
+    const id = decodeURIComponent(slotId.replace('/cancel', ''));
 
+    const booking = await env.DB.prepare(`
+      SELECT b.*, s.date, s.label FROM bookings b
+      JOIN slots s ON s.id = b.slot_id
+      WHERE b.slot_id = ? AND b.status = 'confirmed'
+    `).bind(id).first();
+
+    if (!booking) {
+      return json({ error: 'No confirmed booking found for this slot.' }, 404);
+    }
+
+    await env.DB.prepare(`
+      UPDATE bookings SET status = 'cancelled', updated_at = datetime('now')
+      WHERE slot_id = ? AND status = 'confirmed'
+    `).bind(id).run();
+
+    await bustCache(env);
+
+    // Send cancellation email
+    try {
+      await sendCancellationEmail(booking, env);
+    } catch (err) {
+      console.error('Cancellation email failed:', err);
+    }
+
+    return json({ ok: true });
+  }
   return json({ error: 'Method not allowed' }, 405);
 }
 
