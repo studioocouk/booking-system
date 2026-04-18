@@ -21,7 +21,7 @@ export async function sendConfirmationEmails(booking: BookingRow, env: Env): Pro
 
   // ── Email to client ────────────────────────────────────
   await sendEmail({
-    from:    `${env.YOUR_NAME} <bookings@yourdomain.com>`,  // update domain
+    from:    `${env.YOUR_NAME} <bookings@studioo.co.uk>`,  // update domain
     to:      booking.client_email,
     subject: `Booking confirmed — ${dateStr} at ${booking.label}`,
     html:    clientEmailHtml({
@@ -35,7 +35,7 @@ export async function sendConfirmationEmails(booking: BookingRow, env: Env): Pro
 
   // ── Email to you ───────────────────────────────────────
   await sendEmail({
-    from:    `Booking System <bookings@yourdomain.com>`,
+    from:    `Booking System <bookings@studioo.co.uk>`,
     to:      env.YOUR_EMAIL,
     subject: `New booking: ${booking.client_name} — ${dateStr} ${booking.label}`,
     html:    adminEmailHtml({
