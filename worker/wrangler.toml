@@ -1,0 +1,29 @@
+name = "booking-worker"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ── D1 Database ────────────────────────────────────────────
+[[d1_databases]]
+binding  = "DB"
+database_name = "booking-db"
+database_id   = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+# Create with: wrangler d1 create booking-db
+
+# ── KV Namespace (availability cache) ─────────────────────
+[[kv_namespaces]]
+binding = "KV"
+id      = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+# Create with: wrangler kv:namespace create booking-cache
+
+# ── Environment variables (secrets set separately) ────────
+# Set secrets with:
+#   wrangler secret put STRIPE_SECRET_KEY
+#   wrangler secret put STRIPE_WEBHOOK_SECRET
+#   wrangler secret put ADMIN_SECRET
+#   wrangler secret put RESEND_API_KEY
+
+[vars]
+YOUR_NAME   = "Your Name"
+YOUR_EMAIL  = "you@yourdomain.com"
+WIDGET_URL  = "https://booking.yourdomain.pages.dev"
