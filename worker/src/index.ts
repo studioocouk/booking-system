@@ -37,6 +37,15 @@ const CORS_HEADERS = {
 };
 
 export default {
+  async scheduled(event: ScheduledEvent, env: Env): Promise<void> {
+    await env.DB.prepare(`
+      DELETE FROM bookings
+      WHERE status = 'pending'
+        AND created_at < datetime('now', '-30 minutes')
+    `).run();
+    console.log('Nightly cleanup: stale pending bookings removed.');
+  },
+
   async fetch(request: Request, env: Env): Promise<Response> {
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
@@ -87,6 +96,15 @@ export default {
       return json({ error: 'Internal server error' }, 500, CORS_HEADERS);
     }
   }
+};
+export const scheduled: ExportedHandlerScheduledHandler<Env> = async (event, env) => {
+  await env.DB.prepare(`
+    DELETE FROM bookings
+    WHERE status = 'pending'
+      AND created_at < datetime('now', '-30 minutes')
+  `).run();
+
+  console.log('Nightly cleanup: stale pending bookings removed.');
 };
 
 // ── Helpers ────────────────────────────────────────────────
