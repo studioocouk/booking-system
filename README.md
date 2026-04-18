@@ -1,4 +1,4 @@
-# Booking System
+# Booking System 
 
 A full-stack booking system built for Hostinger iframe embed.
 Powered by Cloudflare Workers + D1 + KV, React, Stripe, and Resend.
