@@ -131,7 +131,7 @@ export async function handleAdminSlots(
       }, 409);
     }
 
-    await env.DB.prepare(`DELETE FROM bookings WHERE slot_id = ? AND status = 'pending'`).bind(id).run();
+    await env.DB.prepare(`DELETE FROM bookings WHERE slot_id = ?`).bind(id).run();
     await env.DB.prepare(`DELETE FROM slots WHERE id = ?`).bind(id).run();
 
     await bustCache(env);
